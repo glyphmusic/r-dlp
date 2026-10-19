@@ -1,3 +1,4 @@
 /target/
+/dist/
 /upstream/
 __pycache__/

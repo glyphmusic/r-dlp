@@ -101,3 +101,19 @@ Pending. No performance improvement has been established.
   broadcasts with direct formats. Added archived/live assertions to unit tests.
 - Second benchmark is diagnostic only; it cannot pass with that rejected video.
 - Reusing the remote Rust builder cache for the corrected Linux binary and tests.
+
+## Corrected Linux build and protocol checks: PASS
+- PC0373 `cargo test --locked`: 3 unit tests passed, binary/doc-test targets passed.
+- PC0373 optimized rebuild succeeded; source implementation is commit 98fb624.
+- Real persistent-process smoke passed: readiness, recovery from malformed JSON
+  and invalid IDs, two real video resolutions including the formerly rejected
+  completed broadcast, EOF shutdown and oversized-frame rejection.
+- Final media-decode checks and full interleaved benchmark are now running.
+
+## Actual media decoding: PASS
+- All four corpus videos decoded successfully on PC0373 with ffmpeg.
+- Each native result produced 44,100 bytes of PCM from a 0.25-second segment.
+- Tested Linux binary size: 3,377,664 bytes.
+- SHA-256: 5fa85d9583c0945b96fc56d115dbd3e8ac7d7e88d84e5eb29014365918cd37c3.
+- Local ready-to-use copy: dist/r-dlp-linux-x86_64 (not committed as source).
+- Full final benchmark is still running; no final acceptance claim yet.
