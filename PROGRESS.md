@@ -46,3 +46,21 @@ Pending. No performance improvement has been established.
   reusable HTTP pool, library API, CLI and persistent stdin/stdout mode.
 - No result cache: warm benchmarks must perform a new upstream request.
 - Local tests/build and multi-song remote baseline are next.
+
+## Build/test update
+- Initial source committed and pushed to main in the newly created repository.
+- Remote Docker build hit Windows SSH credential-helper error (logon session).
+  Investigating an isolated Docker client config for anonymous public image pulls;
+  production configuration and running containers are unchanged.
+- Local Rust compilation is running; remote performance results still pending.
+
+## Verification update
+- Local `cargo test`: 2 tests passed (host/input validation and compatible/default
+  audio selection), plus binary/doc-test targets passed.
+- Server branch `feat/r-dlp-audio` adds opt-in GLYPH_RDLP_PATH worker startup;
+  existing yt-dlp fallback remains. Local native server `cargo check` passed
+  with two pre-existing unused-function warnings.
+- Remote public image pulls work using isolated Docker auths config. Production
+  Docker credentials were not changed. Linux release build is underway.
+- README documents supported subset, upstream commit, persistent protocol,
+  failure/fallback boundaries, and exact cold/warm measurement definitions.
