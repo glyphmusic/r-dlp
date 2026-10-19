@@ -1,12 +1,12 @@
 [package]
 name = "r-dlp"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Focused YouTube audio resolver for Glyph companion"
 
 [dependencies]
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "gzip"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "gzip", "http2"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

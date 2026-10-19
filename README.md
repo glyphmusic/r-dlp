@@ -20,9 +20,13 @@ r-dlp dQw4w9WgXcQ                  # metadata and signed audio URL as JSON
 r-dlp --get-url dQw4w9WgXcQ        # URL only
 r-dlp --verify dQw4w9WgXcQ         # also read 1024 real audio bytes
 r-dlp serve                       # persistent JSON-lines stdin/stdout
+r-dlp serve --warmup              # prime YouTube connection + visitor context
 ```
 
-`serve` immediately emits `{"ready":true,"version":"0.1.0"}`. Send one
+`serve` immediately emits `{"ready":true,"version":"0.1.1"}`. With `--warmup`,
+it first makes a best-effort player resolution (at most four seconds), discards
+the signed URL, and retains the HTTP connection and any visitor context. A failed
+warmup is reported only on stderr and does not prevent readiness. Send one
 `{"id":"dQw4w9WgXcQ"}` line per request; each response contains the same ID
 and either `url` plus metadata or `error`. A process handles requests serially;
 start several for concurrent extraction. Closing stdin shuts it down.
@@ -32,6 +36,12 @@ The library's `Resolver::new()` creates a reusable HTTP client; call
 general CLI parsing, unconditional webpage/config downloads, JavaScript startup and unrelated
 extractors. HTTP keepalive and TLS state persist between requests. There is no
 signed-URL result cache in this resolver.
+
+HTTP/2 is enabled with normal TLS negotiation and HTTP/1.1 fallback. Set
+`RDLP_HTTP1_ONLY=1` to force HTTP/1.1 for A/B benchmarks on the same machine.
+`resolve()` has one eight-second network budget across the initial player call,
+visitor webpage and player retry; library callers can override it through
+`resolve_with_timeout()`. The separate media probe retains its own timeout.
 
 When the player requires anonymous visitor context, the resolver fetches one
 bounded video webpage and retries once, retaining that visitor context in memory.
@@ -64,13 +74,19 @@ Install the Linux binary in the image and set:
 GLYPH_RDLP_PATH=/usr/local/bin/r-dlp
 ```
 
-The existing three workers prestart `r-dlp serve`, retain cancellation cleanup,
+The existing three workers prestart `r-dlp serve --warmup`, retain cancellation cleanup,
 validate returned hosts/IDs, and use the existing yt-dlp command fallback when
 resolution fails. Search/metadata continue through yt-dlp. Unset the variable
 and restart the test instance to restore Python workers. Production rollout
 is separate from resolver benchmarks; see progress for what was actually tested.
 The server does not proactively probe each native signed URL; media transport
 failures remain a caller concern. The benchmark probes every result separately.
+
+Install the updated resolver together with the updated server: the latter uses
+the new `--warmup` option. Native workers retain their connection pool beyond
+100 requests; the Python backend keeps its existing 100-request recycle limit.
+Queued resolutions wait for whichever worker becomes available first, while
+cancellation still kills an in-flight worker to preserve JSON-line framing.
 
 ## Reproduce benchmarks
 
@@ -87,6 +103,13 @@ run interleaved over the same videos and network. A success gate requires all
 audio probes to pass and at least 50% lower median resolution time in both modes.
 These measurements do not imply a 50% reduction in the complete app playback
 path, which also includes Worker, caching, transport and decoding.
+
+Compare negotiated HTTP/2 versus forced HTTP/1.1 with prewarmed workers:
+`python scripts/benchmark_transport.py /path/to/r-dlp --rounds 3`.
+This interleaves both transports over the same four videos, reports startup
+separately, probes each returned URL for real media bytes and never logs URLs.
+The negotiated arm permits HTTP/1.1 fallback; it does not assert the negotiated
+protocol. Results are specific to the tested machine, network and binary.
 
 ## Upstream research
 

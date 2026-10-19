@@ -1,0 +1,28 @@
+{"environment": "Windows-11-10.0.26200-SP0", "rounds": 3, "binary_sha256": "01eaee11199c1a750a264dd05bef551aef40f2eec1daf229f9d920fd716a6743", "definition": "prewarmed persistent workers; fresh resolution; separate media probe"}
+{"mode": "negotiated", "ready_ms": 999.886800000013}
+{"mode": "http1", "ready_ms": 896.5848999999935}
+{"mode": "negotiated", "video": "dQw4w9WgXcQ", "resolve_ms": 73.68910000002415, "ok": true}
+{"mode": "http1", "video": "dQw4w9WgXcQ", "resolve_ms": 67.75099999993017, "ok": true}
+{"mode": "negotiated", "video": "9bZkp7q19f0", "resolve_ms": 63.917999999944186, "ok": true}
+{"mode": "http1", "video": "9bZkp7q19f0", "resolve_ms": 49.046799999928226, "ok": true}
+{"mode": "negotiated", "video": "M7lc1UVf-VE", "resolve_ms": 75.0782000000072, "ok": true}
+{"mode": "http1", "video": "M7lc1UVf-VE", "resolve_ms": 68.85049999993953, "ok": true}
+{"mode": "negotiated", "video": "jNQXAC9IVRw", "resolve_ms": 62.08219999996345, "ok": true}
+{"mode": "http1", "video": "jNQXAC9IVRw", "resolve_ms": 56.25159999999596, "ok": true}
+{"mode": "http1", "video": "dQw4w9WgXcQ", "resolve_ms": 44.31329999999889, "ok": true}
+{"mode": "negotiated", "video": "dQw4w9WgXcQ", "resolve_ms": 59.962199999972654, "ok": true}
+{"mode": "http1", "video": "9bZkp7q19f0", "resolve_ms": 64.64410000000953, "ok": true}
+{"mode": "negotiated", "video": "9bZkp7q19f0", "resolve_ms": 78.8394999999582, "ok": true}
+{"mode": "http1", "video": "M7lc1UVf-VE", "resolve_ms": 65.19649999995636, "ok": true}
+{"mode": "negotiated", "video": "M7lc1UVf-VE", "resolve_ms": 50.06079999998292, "ok": true}
+{"mode": "http1", "video": "jNQXAC9IVRw", "resolve_ms": 71.32209999997485, "ok": true}
+{"mode": "negotiated", "video": "jNQXAC9IVRw", "resolve_ms": 56.59650000006877, "ok": true}
+{"mode": "negotiated", "video": "dQw4w9WgXcQ", "resolve_ms": 74.21050000004925, "ok": true}
+{"mode": "http1", "video": "dQw4w9WgXcQ", "resolve_ms": 49.313399999959984, "ok": true}
+{"mode": "negotiated", "video": "9bZkp7q19f0", "resolve_ms": 70.03889999998592, "ok": true}
+{"mode": "http1", "video": "9bZkp7q19f0", "resolve_ms": 65.79579999993257, "ok": true}
+{"mode": "negotiated", "video": "M7lc1UVf-VE", "resolve_ms": 57.9857999999831, "ok": true}
+{"mode": "http1", "video": "M7lc1UVf-VE", "resolve_ms": 72.22869999998238, "ok": true}
+{"mode": "negotiated", "video": "jNQXAC9IVRw", "resolve_ms": 50.114500000063344, "ok": true}
+{"mode": "http1", "video": "jNQXAC9IVRw", "resolve_ms": 64.80250000004162, "ok": true}
+{"all_passed": true, "summary": {"negotiated": {"samples": 12, "median_resolve_ms": 63.00009999995382}, "http1": {"samples": 12, "median_resolve_ms": 64.99949999999899}}}

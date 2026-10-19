@@ -59,6 +59,7 @@ print(json.dumps({'environment': platform.platform(), 'utc': datetime.datetime.n
  'r_dlp': subprocess.check_output([RUST, '--version'], text=True).strip(),
  'binary_sha256': hashlib.sha256(open(RUST,'rb').read()).hexdigest(),
  'rounds': 3, 'videos': VIDEOS, 'format': FORMAT,
+ 'native_transport': 'http1-only' if os.environ.get('RDLP_HTTP1_ONLY') == '1' else 'http2-negotiated',
  'cold_definition':'fresh process, OS cache not flushed',
  'warm_definition':'same process/client; fresh upstream extraction; no result cache'}), flush=True)
 

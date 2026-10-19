@@ -3,7 +3,10 @@
 use reqwest::{Url, blocking::Client};
 use serde::Serialize;
 use serde_json::{Value, json};
-use std::{sync::Mutex, time::Duration};
+use std::{
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
@@ -27,33 +30,61 @@ pub struct Resolver {
 impl Resolver {
     /// Construct once at companion startup to retain the connection pool.
     pub fn new() -> Result<Self, Error> {
+        let mut builder = Client::builder()
+            .user_agent(USER_AGENT)
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(15))
+            .pool_idle_timeout(Duration::from_secs(90))
+            .redirect(reqwest::redirect::Policy::none());
+        // Keep an explicit HTTP/1 control for same-host A/B measurements.
+        if std::env::var("RDLP_HTTP1_ONLY").as_deref() == Ok("1") {
+            builder = builder.http1_only();
+        }
         Ok(Self {
             visitor: Mutex::new(None),
-            client: Client::builder()
-                .user_agent(USER_AGENT)
-                .connect_timeout(Duration::from_secs(5))
-                .timeout(Duration::from_secs(15))
-                .pool_idle_timeout(Duration::from_secs(90))
-                .redirect(reqwest::redirect::Policy::none())
-                .build()?,
+            client: builder.build()?,
         })
     }
 
     /// Resolve afresh: repeated calls do not reuse signed URLs or cached results.
     pub fn resolve(&self, input: &str) -> Result<Audio, Error> {
+        self.resolve_with_timeout(input, Duration::from_secs(8))
+    }
+
+    /// One budget covers the player, visitor bootstrap and player retry.
+    pub fn resolve_with_timeout(&self, input: &str, timeout: Duration) -> Result<Audio, Error> {
+        self.resolve_at(
+            input,
+            timeout,
+            "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+            "https://www.youtube.com/watch",
+        )
+    }
+
+    fn resolve_at(
+        &self,
+        input: &str,
+        timeout: Duration,
+        player_url: &str,
+        watch_url: &str,
+    ) -> Result<Audio, Error> {
+        let deadline = Instant::now()
+            .checked_add(timeout)
+            .ok_or("Invalid resolution budget")?;
         let id = video_id(input)?;
         let visitor = self
             .visitor
             .lock()
             .map_err(|_| "Visitor state poisoned")?
             .clone();
-        let mut info = self.player(&id, visitor.as_deref())?;
+        let mut info = self.player(&id, visitor.as_deref(), deadline, player_url)?;
         // Some videos require an anonymous visitor context. Bootstrap it only
         // when needed, retain it in memory, and retry once. No user cookies.
         if info["playabilityStatus"]["status"].as_str() == Some("LOGIN_REQUIRED") {
             let response = self
                 .client
-                .get(format!("https://www.youtube.com/watch?v={id}"))
+                .get(format!("{watch_url}?v={id}"))
+                .timeout(remaining(deadline)?)
                 .send()?
                 .error_for_status()?;
             use std::io::Read;
@@ -61,12 +92,26 @@ impl Resolver {
             response.take(4 * 1024 * 1024).read_to_string(&mut page)?;
             let visitor = extract_visitor(&page)?;
             *self.visitor.lock().map_err(|_| "Visitor state poisoned")? = Some(visitor.clone());
-            info = self.player(&id, Some(&visitor))?;
+            info = self.player(&id, Some(&visitor), deadline, player_url)?;
         }
+        remaining(deadline)?;
         select_audio(&id, &info)
     }
 
-    fn player(&self, id: &str, visitor: Option<&str>) -> Result<Value, Error> {
+    /// Prime the actual player connection and anonymous visitor state. Failure
+    /// is best effort: ordinary requests can still retry after startup.
+    pub fn warmup(&self) -> Result<(), Error> {
+        self.resolve_with_timeout("9bZkp7q19f0", Duration::from_secs(4))
+            .map(|_| ())
+    }
+
+    fn player(
+        &self,
+        id: &str,
+        visitor: Option<&str>,
+        deadline: Instant,
+        endpoint: &str,
+    ) -> Result<Value, Error> {
         let mut client = json!({
             "clientName":"VISIONOS", "clientVersion":"1.02",
             "deviceMake":"Apple", "deviceModel":"RealityDevice17,1",
@@ -75,7 +120,7 @@ impl Resolver {
         });
         let mut request = self
             .client
-            .post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+            .post(endpoint)
             .header("X-Youtube-Client-Name", "101")
             .header("X-Youtube-Client-Version", "1.02")
             .header("Origin", "https://www.youtube.com");
@@ -86,6 +131,7 @@ impl Resolver {
         let response = request.json(&json!({"context":{"client":client},
                 "videoId":id,"contentCheckOk":true,"racyCheckOk":true,
                 "playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS"}}}))
+            .timeout(remaining(deadline)?)
             .send()?
             .error_for_status()?;
         // Limit upstream metadata allocation, even if the remote endpoint misbehaves.
@@ -119,6 +165,13 @@ impl Resolver {
         }
         Ok(data.len())
     }
+}
+
+fn remaining(deadline: Instant) -> Result<Duration, Error> {
+    deadline
+        .checked_duration_since(Instant::now())
+        .filter(|remaining| !remaining.is_zero())
+        .ok_or_else(|| "Resolution deadline exceeded".into())
 }
 
 fn extract_visitor(page: &str) -> Result<String, Error> {
@@ -252,6 +305,93 @@ fn select_audio(id: &str, info: &Value) -> Result<Audio, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exhausted_budget_stops_before_network() {
+        assert!(remaining(Instant::now() - Duration::from_millis(1)).is_err());
+        let resolver = Resolver::new().unwrap();
+        let error = resolver
+            .resolve_with_timeout("9bZkp7q19f0", Duration::ZERO)
+            .unwrap_err();
+        assert_eq!(error.to_string(), "Resolution deadline exceeded");
+    }
+
+    #[test]
+    fn visitor_body_read_uses_the_remaining_resolution_budget() {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let upstream = std::thread::spawn(move || {
+            for (delay, body) in [
+                (
+                    Duration::from_millis(200),
+                    r#"{"playabilityStatus":{"status":"LOGIN_REQUIRED"}}"#,
+                ),
+                (
+                    Duration::from_millis(200),
+                    r#"{"VISITOR_DATA":"test-visitor"}"#,
+                ),
+            ] {
+                let accept_deadline = Instant::now() + Duration::from_secs(2);
+                let (mut stream, _) = loop {
+                    match listener.accept() {
+                        Ok(connection) => break connection,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(Instant::now() < accept_deadline, "Missing mock request");
+                            std::thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("Mock accept failed: {error}"),
+                    }
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut length = 0;
+                loop {
+                    let mut line = String::new();
+                    assert!(
+                        reader.read_line(&mut line).unwrap() > 0,
+                        "Incomplete mock request"
+                    );
+                    if line == "\r\n" {
+                        break;
+                    }
+                    if let Some(value) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                        length = value.trim().parse::<usize>().unwrap();
+                    }
+                }
+                reader.read_exact(&mut vec![0; length]).unwrap();
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                )
+                .unwrap();
+                stream.flush().unwrap();
+                std::thread::sleep(delay);
+                let _ = stream.write_all(body.as_bytes());
+            }
+        });
+        let resolver = Resolver {
+            client: Client::builder().no_proxy().build().unwrap(),
+            visitor: Mutex::new(None),
+        };
+        let started = Instant::now();
+        let budget = Duration::from_millis(300);
+        let error = resolver
+            .resolve_at("9bZkp7q19f0", budget, &endpoint, &endpoint)
+            .unwrap_err();
+        let elapsed = started.elapsed();
+        upstream.join().unwrap();
+        // Reqwest can wrap a body timeout as a decoding or IO error depending
+        // on the transport. Assert behavior rather than that wrapper type.
+        assert!(elapsed >= budget, "Unexpected early failure: {error}");
+        // Each stage fits within 300 ms individually. Resetting the budget
+        // would consume the visitor body and store its value before retrying.
+        assert!(resolver.visitor.lock().unwrap().is_none());
+    }
     #[test]
     fn reads_escaped_visitor_without_parsing_entire_webpage() {
         assert_eq!(

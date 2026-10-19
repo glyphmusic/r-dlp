@@ -2,6 +2,17 @@
 
 Updated: 2026-10-19 (Europe/Berlin)
 
+## 0.1.1 release preparation
+- HTTP/2 negotiation, opt-in bounded worker warmup and a shared eight-second
+  resolution deadline are implemented; HTTP/1-only control supports A/B runs.
+- Five resolver tests pass locally, including a stalled visitor-body regression.
+- Windows transport comparison: 24/24 real audio probes passed; medians 63 ms
+  negotiated and 65 ms forced HTTP/1.1. This is not evidence of a substantial
+  transport improvement, and does not measure complete app playback latency.
+- Server scheduling and native worker retention changes are local in the
+  separate glyph-server repository; this resolver release does not deploy them.
+- Version 0.1.1 is prepared for the existing five-platform release workflow.
+
 ## Current acceptance: PASS on PC0373
 
 Final measured resolver performance (median, four videos, three rounds each):

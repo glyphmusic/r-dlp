@@ -1,7 +1,12 @@
-# r-dlp 0.1.0
+# r-dlp 0.1.1
 
-Focused native Rust YouTube audio resolver for Glyph companion, with reusable HTTP connections, anonymous visitor bootstrap and a persistent JSON-lines worker mode.
+Connection and startup improvements for the native YouTube audio resolver:
 
-Measured on PC0373 against yt-dlp 2026.08.19: median cold resolution 3.114 s to 0.772 s (75.2% lower), warm 1.101 s to 0.058 s (94.7% lower). Four videos, three rounds per mode; all 48 comparison requests passed audio-range checks and all four native results decoded successfully.
+- HTTP/2 negotiation with HTTP/1.1 fallback. Set `RDLP_HTTP1_ONLY=1` for comparison runs.
+- `r-dlp serve --warmup` primes the player connection and visitor context before readiness, with a four-second best-effort budget.
+- One eight-second resolution budget now covers the player request, visitor webpage and player retry. Library callers can use `resolve_with_timeout()`.
+- New transport benchmark interleaves both modes and checks real audio bytes without logging signed URLs.
 
-Supports direct MP4 audio with Vorbis fallback. Search, authenticated content, other sites, live streams and signature deciphering stay with yt-dlp. Measurements cover resolver latency, not full application playback startup. See README.md and PROGRESS.md for scope and raw evidence.
+Local Windows validation: five resolver tests passed and all 24 transport comparison requests passed real media-range checks. Median warm resolution was 63 ms with normal protocol negotiation versus 65 ms with forced HTTP/1.1. This small sample does not establish a meaningful HTTP/2 speed improvement or end-to-end playback improvement; the negotiated arm allows HTTP/1.1 fallback.
+
+The companion changes for next-available-worker scheduling and retaining native workers beyond 100 requests live in the separate Glyph server repository. They require an updated server deployment; publishing this resolver release does not deploy that integration. Existing `serve` callers remain compatible, and updated servers can use `serve --warmup` with this version.

@@ -16,12 +16,17 @@ fn run() -> Result<(), Error> {
     }
     if args.is_empty() || args == ["--help"] {
         println!(
-            "r-dlp [--get-url | --verify] VIDEO\nr-dlp serve   # newline JSON {{\"id\":\"VIDEO_ID\"}} on stdin"
+            "r-dlp [--get-url | --verify] VIDEO\nr-dlp serve [--warmup]   # newline JSON {{\"id\":\"VIDEO_ID\"}} on stdin"
         );
         return Ok(());
     }
     let resolver = Resolver::new()?;
-    if args == ["serve"] {
+    if args == ["serve"] || args == ["serve", "--warmup"] {
+        if args.len() == 2 {
+            if let Err(error) = resolver.warmup() {
+                eprintln!("r-dlp: warmup skipped: {error}");
+            }
+        }
         println!(
             "{}",
             json!({"ready":true,"version":env!("CARGO_PKG_VERSION")})
