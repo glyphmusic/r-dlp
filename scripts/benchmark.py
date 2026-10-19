@@ -114,4 +114,12 @@ for phase in ['cold','warm']:
         reduction = 1 - candidate['median_resolve_ms']/baseline['median_resolve_ms']
         summary[phase+'_reduction_percent'] = reduction*100
         summary[phase+'_passes'] = reduction>=.5 and baseline['success']==baseline['attempts'] and candidate['success']==candidate['attempts']
+        comparisons = {}
+        for video in VIDEOS:
+            samples = [[r['resolve_ms'] for r in rows if r['mode']==name+'-'+phase and r['video']==video and r['ok']] for name in ['yt-dlp','r-dlp']]
+            if all(len(sample)==3 for sample in samples):
+                medians = [statistics.median(sample) for sample in samples]
+                comparisons[video] = {'yt_dlp_ms':medians[0], 'r_dlp_ms':medians[1], 'reduction_percent':(1-medians[1]/medians[0])*100}
+        summary[phase+'_per_video'] = comparisons
+        summary[phase+'_all_videos_pass'] = len(comparisons)==len(VIDEOS) and all(r['reduction_percent']>=50 for r in comparisons.values())
 print(json.dumps({'summary':summary}),flush=True)

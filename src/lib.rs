@@ -201,7 +201,12 @@ fn select_audio(id: &str, info: &Value) -> Result<Audio, Error> {
     if info["videoDetails"]["videoId"].as_str() != Some(id) {
         return Err("Mismatched player video".into());
     }
-    if info["videoDetails"]["isLiveContent"].as_bool() == Some(true) {
+    // isLiveContent also marks completed broadcasts with ordinary direct audio.
+    if info["videoDetails"]["isLive"].as_bool() == Some(true)
+        || info["microformat"]["playerMicroformatRenderer"]["liveBroadcastDetails"]["isLiveNow"]
+            .as_bool()
+            == Some(true)
+    {
         return Err("Live content is not supported".into());
     }
     let formats = info["streamingData"]["adaptiveFormats"]
@@ -285,6 +290,11 @@ mod tests {
             {"itag":251,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":160000,"url":"https://a.googlevideo.com/c"}
         ]}});
         assert_eq!(select_audio("dQw4w9WgXcQ", &info).unwrap().format_id, 140);
+        info["videoDetails"]["isLiveContent"] = json!(true);
+        assert!(select_audio("dQw4w9WgXcQ", &info).is_ok());
+        info["videoDetails"]["isLive"] = json!(true);
+        assert!(select_audio("dQw4w9WgXcQ", &info).is_err());
+        info["videoDetails"]["isLive"] = json!(false);
         info["videoDetails"]["videoId"] = json!("aaaaaaaaaaa");
         assert!(select_audio("dQw4w9WgXcQ", &info).is_err());
     }

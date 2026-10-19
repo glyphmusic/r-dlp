@@ -85,3 +85,19 @@ Pending. No performance improvement has been established.
   visitor context is retained in memory for warm requests. No user login/cookies.
 - Three local tests pass, including escaped visitor-context extraction.
 - Rebuilding native Linux binary before repeating the complete benchmark.
+
+## Second run preparation
+- Visitor-context fix is committed/pushed at 15e5383.
+- Acceptance script now also calculates per-video median reductions for both
+  cold and warm modes. Missing/failed samples cannot pass that per-video gate.
+- Initial failed run remains checked in; it is not an accepted benchmark.
+- Concurrent unrelated edits appeared in glyph-server after the opt-in commit;
+  only ytdlp_pool.rs was committed for this task. Other edits are left untouched.
+
+## Protocol test found another compatibility bug
+- Remote protocol smoke recovered from invalid JSON/IDs correctly, but failed
+  on the archived/live-content test video: isLiveContent was treated as live now.
+- Corrected live detection to actual isLive/isLiveNow flags, allowing completed
+  broadcasts with direct formats. Added archived/live assertions to unit tests.
+- Second benchmark is diagnostic only; it cannot pass with that rejected video.
+- Reusing the remote Rust builder cache for the corrected Linux binary and tests.
