@@ -135,3 +135,14 @@ Measurements were pending at repository creation. Final acceptance is above.
 - SHA-256: 5fa85d9583c0945b96fc56d115dbd3e8ac7d7e88d84e5eb29014365918cd37c3.
 - Local ready-to-use copy: dist/r-dlp-linux-x86_64 (not committed as source).
 - Full final benchmark is still running; no final acceptance claim yet.
+
+## Production release preparation - 2026-10-19
+- User authorized production activation and releases: r-dlp 0.1.0, desktop 0.2.4,
+  server 0.2.5 and companion 0.2.4.
+- User explicitly approved making glyphmusic/r-dlp public; visibility changed.
+- Read the referenced Antigravity review chat and matched its local changes:
+  forced YouTube source with Local/Server choice, extended search, no previews;
+  server/companion downloads, shared TOML-only adaptive parallel download queue.
+- Preparing versioned native packages and a companion image pinned to all three
+  upstream source revisions, with r-dlp enabled by default and yt-dlp fallback.
+- Production deployment and final release assets are still pending.
