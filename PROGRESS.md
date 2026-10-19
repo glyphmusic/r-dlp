@@ -2,6 +2,24 @@
 
 Updated: 2026-10-19 (Europe/Berlin)
 
+## Current acceptance: PASS on PC0373
+
+Final measured resolver performance (median, four videos, three rounds each):
+- Cold: yt-dlp 3113.607 ms -> r-dlp 772.385 ms; 75.193% reduction.
+- Warm: yt-dlp 1100.838 ms -> r-dlp 58.311 ms; 94.703% reduction.
+- Each of the four videos individually exceeds 50% in both modes.
+- All 48 comparison requests passed real HTTP 206 media checks (24 per tool).
+- All four native URLs also passed actual ffmpeg audio decoding.
+- Cold includes native visitor bootstrap when needed. Warm uses fresh network
+  extraction in a retained process, with no signed-URL result cache.
+- Scope: direct YouTube audio resolution in the PC0373 companion runtime.
+  Full app click-to-play latency and production rollout are not measured here.
+- Server opt-in integration is pushed on feat/r-dlp-audio, not activated in
+  production by this task. Its local compile check passed.
+- Source implementation: 98fb624; measured binary SHA-256 below.
+- Evidence: benchmarks/2026-10-19-final.jsonl and
+  benchmarks/2026-10-19-media-decode.jsonl. Failed intermediate runs are retained.
+
 ## Goal and acceptance
 Native Rust implementation of the YouTube audio subset used by Glyph companion.
 Cold and warm resolution must each be at least 50% faster than ordinary yt-dlp
@@ -17,7 +35,7 @@ until measurements establish both thresholds. Existing production services stay 
 4. Build and test in isolation on PC0373; compare paired runs and retain raw evidence.
 5. Prepare companion integration on a separate branch, document limitations.
 
-## Current status
+## Initial investigation status (historical)
 - r-dlp directory existed and was empty; local main repository initialized.
 - GitHub creation requested for glyphmusic/r-dlp (private by default); pending verification.
 - SSH to PC0373 works. Production companion is a Linux Docker container.
@@ -28,8 +46,8 @@ until measurements establish both thresholds. Existing production services stay 
 - Upstream YouTube client policies inspected: legacy Android VR URLs can be
   rejected with HTTP 403. Returning a URL alone is insufficient evidence.
 
-## Measurements
-Pending. No performance improvement has been established.
+## Initial measurement state (historical)
+Measurements were pending at repository creation. Final acceptance is above.
 
 ## Decisions and scope
 - Initial target: Linux x86_64 companion on PC0373.

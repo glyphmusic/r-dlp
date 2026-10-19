@@ -4,6 +4,14 @@ Native Rust YouTube audio resolver for Glyph companion. This implements the
 small direct-audio subset Glyph needs, rather than all of yt-dlp.
 Progress and actual acceptance status: [PROGRESS.md](PROGRESS.md).
 
+Measured on PC0373 (2026-10-19): cold resolution median **3.114 s -> 0.772 s**
+(75.2% lower); persistent warm median **1.101 s -> 0.058 s** (94.7% lower).
+Four videos, three rounds per mode, all 48 requests passed actual audio-range
+checks. Each video individually exceeds 50% improvement in both modes.
+All four native results also decoded successfully with ffmpeg. These figures
+measure resolver latency, not complete app click-to-play time. Raw evidence:
+[final benchmark](benchmarks/2026-10-19-final.jsonl).
+
 ## Use
 
 ```sh
@@ -61,6 +69,8 @@ validate returned hosts/IDs, and use the existing yt-dlp command fallback when
 resolution fails. Search/metadata continue through yt-dlp. Unset the variable
 and restart the test instance to restore Python workers. Production rollout
 is separate from resolver benchmarks; see progress for what was actually tested.
+The server does not proactively probe each native signed URL; media transport
+failures remain a caller concern. The benchmark probes every result separately.
 
 ## Reproduce benchmarks
 
