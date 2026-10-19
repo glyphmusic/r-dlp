@@ -2,6 +2,14 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to package
+        required: true
+        default: v0.1.0
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 permissions:
   contents: write
 jobs:
@@ -21,6 +29,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -30,7 +40,7 @@ jobs:
           cargo build --release --locked --target ${{ matrix.target }}
       - name: Package
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           NAME="r-dlp-${VERSION}-${{ matrix.target }}"
           mkdir -p dist/stage
           BIN=r-dlp; [ "${{ runner.os }}" = "Windows" ] && BIN=r-dlp.exe
@@ -48,6 +58,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          tag_name: ${{ env.RELEASE_TAG }}
           body_path: RELEASE_NOTES.md
           files: |
             dist/*.zip
@@ -72,5 +83,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat checksums/*.sha256 | sort > SHA256SUMS.txt
-          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
-          gh release edit "${{ github.ref_name }}" --draft=false --latest
+          gh release upload "$RELEASE_TAG" SHA256SUMS.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest
