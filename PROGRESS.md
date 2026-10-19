@@ -145,4 +145,38 @@ Measurements were pending at repository creation. Final acceptance is above.
   server/companion downloads, shared TOML-only adaptive parallel download queue.
 - Preparing versioned native packages and a companion image pinned to all three
   upstream source revisions, with r-dlp enabled by default and yt-dlp fallback.
-- Production deployment and final release assets are still pending.
+
+## Release checks in progress
+- r-dlp v0.1.0, desktop v0.2.4, server v0.2.5 and companion v0.2.4 tags pushed.
+- Server integration fast-forwarded to main together with all changes from the
+  referenced download/forced-source chat; no release tag was rewritten.
+- Server core: 144 tests passed, including forced-source and download contracts.
+- Platform release jobs and pinned native companion image build are running.
+- Worker release build finished; optimization/integration/deployment is pending.
+- Prepared production smoke checks for real 64-KiB media ranges and retained
+  native workers, not merely a configured backend path.
+
+## Validation update
+- Desktop core release checks: 150 passed, 1 intentionally ignored live-install
+  test; no failures. Full app compile check still running.
+- Server core: 144 passed. Native server: 34 passed.
+- Optimized Worker integration checks passed, including companion downloads,
+  byte ranges, cache behavior, origin/URL restrictions and access enforcement.
+- Worker deploy is running after the successful integration checks.
+- Local build cleanup was deferred while compilers were active and will be
+  retried when the owned builds finish; no compiler or app was stopped.
+
+## Release complete: PASS
+- All four releases published: r-dlp v0.1.0 (public), desktop v0.2.4,
+  server v0.2.5 and companion 0.2.4, each marked Latest.
+- Desktop release: all 6 platform packages plus SHA256SUMS.txt uploaded;
+  setup.exe spot-checked against its checksum (OK).
+- Companion image 0.2.4 built and pinned to desktop fd6551b, r-dlp df949a4
+  and server 4678791; deployed on PC0373 via Watchtower (labels verified).
+- Production smoke test on PC0373 over the Worker-authenticated /internal
+  path: `Get Lucky` resolved through r-dlp to YouTube 5NV6Rdv1a3I
+  (2.42 s cold, 0.8 ms warm from cache); real 64-KiB byte range returned
+  HTTP 206 audio/mp4 (4,025,466 bytes total, genuine `ftyp dash` static
+  data); a second mid-file range came back in 49 ms.
+- The three prestarted r-dlp workers kept identical PIDs after real audio
+  traffic, confirming retention, not just configuration.
