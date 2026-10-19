@@ -64,3 +64,24 @@ Pending. No performance improvement has been established.
   Docker credentials were not changed. Linux release build is underway.
 - README documents supported subset, upstream commit, persistent protocol,
   failure/fallback boundaries, and exact cold/warm measurement definitions.
+
+## Remote measurement started
+- PC0373 Linux release build succeeded (Rust Docker builder; optimized binary).
+- Test binary copied to /tmp/r-dlp in the existing companion runtime, with no
+  replacement of production binaries, service restart or configuration change.
+- Benchmark is running: four videos, three rounds per mode, interleaved runs,
+  ordinary yt-dlp CLI and persistent YoutubeDL vs native CLI and persistent
+  r-dlp, with a 1024-byte HTTP 206 check on every successful extraction.
+- Raw redacted output will be retained in benchmarks/ after completion.
+
+## First full run: FAILED (retained)
+- Ordinary yt-dlp succeeded on all 12 cold and 12 warm requests.
+- Initial native direct-only implementation succeeded on only 3/12 in each mode;
+  therefore both acceptance gates FAILED despite low successful-request timings.
+- Raw initial failures: benchmarks/2026-10-19-initial-failed.jsonl.
+- Root cause established with remote A/B probe: adding anonymous visitor context
+  obtained from the video webpage makes the rejected player call succeed.
+- Implemented one bounded webpage bootstrap + player retry on LOGIN_REQUIRED;
+  visitor context is retained in memory for warm requests. No user login/cookies.
+- Three local tests pass, including escaped visitor-context extraction.
+- Rebuilding native Linux binary before repeating the complete benchmark.

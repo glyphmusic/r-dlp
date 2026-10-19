@@ -21,9 +21,13 @@ start several for concurrent extraction. Closing stdin shuts it down.
 
 The library's `Resolver::new()` creates a reusable HTTP client; call
 `Resolver::resolve()` on a blocking worker thread. This avoids Python import,
-general CLI parsing, webpage/config downloads, JavaScript startup and unrelated
+general CLI parsing, unconditional webpage/config downloads, JavaScript startup and unrelated
 extractors. HTTP keepalive and TLS state persist between requests. There is no
 signed-URL result cache in this resolver.
+
+When the player requires anonymous visitor context, the resolver fetches one
+bounded video webpage and retries once, retaining that visitor context in memory.
+This adds work to some cold calls; the benchmark includes that cost.
 
 ## Compatibility
 

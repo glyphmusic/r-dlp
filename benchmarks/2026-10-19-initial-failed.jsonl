@@ -1,0 +1,50 @@
+{"environment": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41", "utc": "2026-10-19T00:35:10.356384+00:00", "yt_dlp": "2026.08.19", "r_dlp": "0.1.0", "binary_sha256": "e1212135a0838d24d540181aca4c50f0e49d2e6f88e31b87be8e8c532a192ad3", "rounds": 3, "videos": ["dQw4w9WgXcQ", "9bZkp7q19f0", "M7lc1UVf-VE", "jNQXAC9IVRw"], "format": "bestaudio[ext=m4a]/bestaudio[acodec=vorbis]", "cold_definition": "fresh process, OS cache not flushed", "warm_definition": "same process/client; fresh upstream extraction; no result cache"}
+{"mode": "yt-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 6905.434605010669, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 6991.464147999068, "ok": true}
+{"mode": "r-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 93.6674129916355, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 139.75015399046242, "ok": true}
+{"mode": "yt-dlp-cold", "video": "9bZkp7q19f0", "resolve_ms": 2870.5202619894408, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 2927.883848999045, "ok": true}
+{"mode": "r-dlp-cold", "video": "9bZkp7q19f0", "ok": false, "error": "CalledProcessError", "elapsed_ms": 85.49178700195625}
+{"mode": "yt-dlp-cold", "video": "M7lc1UVf-VE", "resolve_ms": 2767.6794760045595, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 2998.959376011044, "ok": true}
+{"mode": "r-dlp-cold", "video": "M7lc1UVf-VE", "ok": false, "error": "CalledProcessError", "elapsed_ms": 120.07821199949831}
+{"mode": "yt-dlp-cold", "video": "jNQXAC9IVRw", "resolve_ms": 2807.2439079987817, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 2855.60166000505, "ok": true}
+{"mode": "r-dlp-cold", "video": "jNQXAC9IVRw", "ok": false, "error": "CalledProcessError", "elapsed_ms": 81.76558199920692}
+{"mode": "r-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 74.25996899837628, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 110.59523798758164, "ok": true}
+{"mode": "yt-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 6243.202527999529, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 6287.437594000949, "ok": true}
+{"mode": "r-dlp-cold", "video": "9bZkp7q19f0", "ok": false, "error": "CalledProcessError", "elapsed_ms": 87.9867949988693}
+{"mode": "yt-dlp-cold", "video": "9bZkp7q19f0", "resolve_ms": 6052.463764004642, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 6088.014124004985, "ok": true}
+{"mode": "r-dlp-cold", "video": "M7lc1UVf-VE", "ok": false, "error": "CalledProcessError", "elapsed_ms": 72.73114299459849}
+{"mode": "yt-dlp-cold", "video": "M7lc1UVf-VE", "resolve_ms": 3536.4816450019134, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3564.7654610074824, "ok": true}
+{"mode": "r-dlp-cold", "video": "jNQXAC9IVRw", "ok": false, "error": "CalledProcessError", "elapsed_ms": 73.59760699910112}
+{"mode": "yt-dlp-cold", "video": "jNQXAC9IVRw", "resolve_ms": 2860.753778993967, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 2908.8128360017436, "ok": true}
+{"mode": "yt-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 6346.206629998051, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 6388.422855001409, "ok": true}
+{"mode": "r-dlp-cold", "video": "dQw4w9WgXcQ", "resolve_ms": 84.27643700269982, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 114.74659299710765, "ok": true}
+{"mode": "yt-dlp-cold", "video": "9bZkp7q19f0", "resolve_ms": 3144.42076299747, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3177.2617350070504, "ok": true}
+{"mode": "r-dlp-cold", "video": "9bZkp7q19f0", "ok": false, "error": "CalledProcessError", "elapsed_ms": 67.65389199426863}
+{"mode": "yt-dlp-cold", "video": "M7lc1UVf-VE", "resolve_ms": 3246.4622690022225, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3289.8678360070335, "ok": true}
+{"mode": "r-dlp-cold", "video": "M7lc1UVf-VE", "ok": false, "error": "CalledProcessError", "elapsed_ms": 74.28379100747406}
+{"mode": "yt-dlp-cold", "video": "jNQXAC9IVRw", "resolve_ms": 3334.5149689994287, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3390.9541989996796, "ok": true}
+{"mode": "r-dlp-cold", "video": "jNQXAC9IVRw", "ok": false, "error": "CalledProcessError", "elapsed_ms": 89.07447599631269}
+{"mode": "yt-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 3678.8809280114947, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3707.51282000856, "ok": true}
+{"mode": "r-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 52.90936600067653, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 79.85793400439434, "ok": true}
+{"mode": "yt-dlp-warm", "video": "9bZkp7q19f0", "resolve_ms": 1279.6193870017305, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1317.3986469919328, "ok": true}
+{"mode": "r-dlp-warm", "video": "9bZkp7q19f0", "ok": false, "error": "RuntimeError", "elapsed_ms": 39.18946300109383}
+{"mode": "yt-dlp-warm", "video": "M7lc1UVf-VE", "resolve_ms": 1232.019309012685, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1268.7641940137837, "ok": true}
+{"mode": "r-dlp-warm", "video": "M7lc1UVf-VE", "ok": false, "error": "RuntimeError", "elapsed_ms": 42.7328220102936}
+{"mode": "yt-dlp-warm", "video": "jNQXAC9IVRw", "resolve_ms": 912.9506989993388, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 939.7727579926141, "ok": true}
+{"mode": "r-dlp-warm", "video": "jNQXAC9IVRw", "ok": false, "error": "RuntimeError", "elapsed_ms": 46.32178400061093}
+{"mode": "r-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 44.24833299708553, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 78.14070899621584, "ok": true}
+{"mode": "yt-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 4244.62258600397, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 4286.519661007333, "ok": true}
+{"mode": "r-dlp-warm", "video": "9bZkp7q19f0", "ok": false, "error": "RuntimeError", "elapsed_ms": 41.978580004069954}
+{"mode": "yt-dlp-warm", "video": "9bZkp7q19f0", "resolve_ms": 1385.9858990035718, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1454.4331209908705, "ok": true}
+{"mode": "r-dlp-warm", "video": "M7lc1UVf-VE", "ok": false, "error": "RuntimeError", "elapsed_ms": 47.175261002848856}
+{"mode": "yt-dlp-warm", "video": "M7lc1UVf-VE", "resolve_ms": 1004.3779979896499, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1044.0454089984996, "ok": true}
+{"mode": "r-dlp-warm", "video": "jNQXAC9IVRw", "ok": false, "error": "RuntimeError", "elapsed_ms": 42.599426000379026}
+{"mode": "yt-dlp-warm", "video": "jNQXAC9IVRw", "resolve_ms": 1003.9201639883686, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1053.3258899959037, "ok": true}
+{"mode": "yt-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 3788.852476005559, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 3820.0945380085614, "ok": true}
+{"mode": "r-dlp-warm", "video": "dQw4w9WgXcQ", "resolve_ms": 46.267297002486885, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 78.24901399726514, "ok": true}
+{"mode": "yt-dlp-warm", "video": "9bZkp7q19f0", "resolve_ms": 1375.8958909893408, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1409.2553130030865, "ok": true}
+{"mode": "r-dlp-warm", "video": "9bZkp7q19f0", "ok": false, "error": "RuntimeError", "elapsed_ms": 36.573464996763505}
+{"mode": "yt-dlp-warm", "video": "M7lc1UVf-VE", "resolve_ms": 1003.2687280036043, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 1036.0399049968692, "ok": true}
+{"mode": "r-dlp-warm", "video": "M7lc1UVf-VE", "ok": false, "error": "RuntimeError", "elapsed_ms": 46.949048002716154}
+{"mode": "yt-dlp-warm", "video": "jNQXAC9IVRw", "resolve_ms": 962.2009239974432, "format_id": "140", "probe": {"status": 206, "bytes": 1024}, "total_ms": 994.5014659897424, "ok": true}
+{"mode": "r-dlp-warm", "video": "jNQXAC9IVRw", "ok": false, "error": "RuntimeError", "elapsed_ms": 43.62309700809419}
+{"summary": {"yt-dlp-cold": {"success": 12, "attempts": 12, "median_resolve_ms": 3290.4886190008256, "median_total_ms": 3340.4110175033566}, "r-dlp-cold": {"success": 3, "attempts": 12, "median_resolve_ms": 84.27643700269982, "median_total_ms": 114.74659299710765}, "yt-dlp-warm": {"success": 12, "attempts": 12, "median_resolve_ms": 1255.8193480072077, "median_total_ms": 1293.0814205028582}, "r-dlp-warm": {"success": 3, "attempts": 12, "median_resolve_ms": 46.267297002486885, "median_total_ms": 78.24901399726514}, "cold_reduction_percent": 97.43878655236648, "cold_passes": false, "warm_reduction_percent": 96.31576810184474, "warm_passes": false}}

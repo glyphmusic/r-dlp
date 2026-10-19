@@ -3,7 +3,7 @@
 use reqwest::{Url, blocking::Client};
 use serde::Serialize;
 use serde_json::{Value, json};
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
@@ -21,12 +21,14 @@ pub struct Audio {
 
 pub struct Resolver {
     client: Client,
+    visitor: Mutex<Option<String>>,
 }
 
 impl Resolver {
     /// Construct once at companion startup to retain the connection pool.
     pub fn new() -> Result<Self, Error> {
         Ok(Self {
+            visitor: Mutex::new(None),
             client: Client::builder()
                 .user_agent(USER_AGENT)
                 .connect_timeout(Duration::from_secs(5))
@@ -40,16 +42,50 @@ impl Resolver {
     /// Resolve afresh: repeated calls do not reuse signed URLs or cached results.
     pub fn resolve(&self, input: &str) -> Result<Audio, Error> {
         let id = video_id(input)?;
-        let response = self
+        let visitor = self
+            .visitor
+            .lock()
+            .map_err(|_| "Visitor state poisoned")?
+            .clone();
+        let mut info = self.player(&id, visitor.as_deref())?;
+        // Some videos require an anonymous visitor context. Bootstrap it only
+        // when needed, retain it in memory, and retry once. No user cookies.
+        if info["playabilityStatus"]["status"].as_str() == Some("LOGIN_REQUIRED") {
+            let response = self
+                .client
+                .get(format!("https://www.youtube.com/watch?v={id}"))
+                .send()?
+                .error_for_status()?;
+            use std::io::Read;
+            let mut page = String::new();
+            response.take(4 * 1024 * 1024).read_to_string(&mut page)?;
+            let visitor = extract_visitor(&page)?;
+            *self.visitor.lock().map_err(|_| "Visitor state poisoned")? = Some(visitor.clone());
+            info = self.player(&id, Some(&visitor))?;
+        }
+        select_audio(&id, &info)
+    }
+
+    fn player(&self, id: &str, visitor: Option<&str>) -> Result<Value, Error> {
+        let mut client = json!({
+            "clientName":"VISIONOS", "clientVersion":"1.02",
+            "deviceMake":"Apple", "deviceModel":"RealityDevice17,1",
+            "osName":"visionOS", "osVersion":"26.5.23O471", "hl":"en", "gl":"US",
+            "userAgent":USER_AGENT
+        });
+        let mut request = self
             .client
             .post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
             .header("X-Youtube-Client-Name", "101")
             .header("X-Youtube-Client-Version", "1.02")
-            .json(&json!({"context":{"client":{
-                "clientName":"VISIONOS", "clientVersion":"1.02",
-                "deviceMake":"Apple", "deviceModel":"RealityDevice17,1",
-                "osName":"visionOS", "osVersion":"26.5.23O471", "hl":"en", "gl":"US"
-            }},"videoId":id,"contentCheckOk":true,"racyCheckOk":true}))
+            .header("Origin", "https://www.youtube.com");
+        if let Some(visitor) = visitor {
+            client["visitorData"] = json!(visitor);
+            request = request.header("X-Goog-Visitor-Id", visitor);
+        }
+        let response = request.json(&json!({"context":{"client":client},
+                "videoId":id,"contentCheckOk":true,"racyCheckOk":true,
+                "playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS"}}}))
             .send()?
             .error_for_status()?;
         // Limit upstream metadata allocation, even if the remote endpoint misbehaves.
@@ -59,8 +95,7 @@ impl Resolver {
         if body.len() > 4 * 1024 * 1024 {
             return Err("Player response too large".into());
         }
-        let info: Value = serde_json::from_slice(&body)?;
-        select_audio(&id, &info)
+        Ok(serde_json::from_slice(&body)?)
     }
 
     /// Verify that the same egress can read real media bytes. Separate from
@@ -84,6 +119,22 @@ impl Resolver {
         }
         Ok(data.len())
     }
+}
+
+fn extract_visitor(page: &str) -> Result<String, Error> {
+    let value = page
+        .split_once("\"VISITOR_DATA\"")
+        .and_then(|(_, rest)| rest.split_once(':'))
+        .map(|(_, rest)| rest.trim_start())
+        .ok_or("No anonymous visitor context")?;
+    let visitor = serde_json::Deserializer::from_str(value)
+        .into_iter::<String>()
+        .next()
+        .ok_or("Missing visitor value")??;
+    if visitor.is_empty() || visitor.len() > 1024 || !visitor.is_ascii() {
+        return Err("Invalid visitor context".into());
+    }
+    Ok(visitor)
 }
 
 pub fn video_id(input: &str) -> Result<String, Error> {
@@ -196,6 +247,15 @@ fn select_audio(id: &str, info: &Value) -> Result<Audio, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reads_escaped_visitor_without_parsing_entire_webpage() {
+        assert_eq!(
+            extract_visitor(r#"<script>{"VISITOR_DATA": "abc\u003d", "other":1}</script>"#)
+                .unwrap(),
+            "abc="
+        );
+        assert!(extract_visitor(r#"{"VISITOR_DATA": 42}"#).is_err());
+    }
     #[test]
     fn rejects_foreign_hosts_and_malformed_inputs() {
         assert_eq!(
