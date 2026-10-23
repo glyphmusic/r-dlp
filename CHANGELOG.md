@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Releases are signed: `SHA256SUMS.txt` comes with `SHA256SUMS.txt.minisig`, a signature by the Glyph release key for this exact version. The Glyph companion installs r-dlp updates only with it.
+
 ## 0.1.1 - 2026-10-19
 
 ### Changed

@@ -88,6 +88,15 @@ the new `--warmup` option. Native workers retain their connection pool beyond
 Queued resolutions wait for whichever worker becomes available first, while
 cancellation still kills an in-flight worker to preserve JSON-line framing.
 
+## Releases
+
+Each release ships `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`, a signature
+by the Glyph release key (`release-key.pub`) whose trusted comment names this
+repository and the tag. The companion installs updates only with it. Check a
+download with `minisign -Vm SHA256SUMS.txt -p release-key.pub`. The release
+workflow signs with the repository secret `GLYPH_RELEASE_KEY`
+(`scripts/sign-release.sh`).
+
 ## Reproduce benchmarks
 
 Build using the included Dockerfile on PC0373. Copy the resulting Linux binary
