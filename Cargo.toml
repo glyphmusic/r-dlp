@@ -1,6 +1,6 @@
 [package]
 name = "r-dlp"
-version = "0.8.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 description = "Focused YouTube audio resolver for Glyph companion"
