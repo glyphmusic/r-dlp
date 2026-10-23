@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-10-23
+
+### Security
+
+- Release files are verified and signed together before publication. Concurrent builds cannot overwrite archives or checksums of a published release.
+
 ### Changed
 
 - Releases are signed: `SHA256SUMS.txt` comes with `SHA256SUMS.txt.minisig`, a signature by the Glyph release key for this exact version. The Glyph companion installs r-dlp updates only with it.
