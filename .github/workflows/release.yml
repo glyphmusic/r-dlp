@@ -72,6 +72,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: checksums-*
@@ -81,7 +82,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          # The companion installs r-dlp only with this signature.
+          GLYPH_RELEASE_KEY: ${{ secrets.GLYPH_RELEASE_KEY }}
         run: |
           cat checksums/*.sha256 | sort > SHA256SUMS.txt
-          gh release upload "$RELEASE_TAG" SHA256SUMS.txt --clobber
+          sh scripts/sign-release.sh SHA256SUMS.txt "$GH_REPO" "$RELEASE_TAG"
+          gh release upload "$RELEASE_TAG" SHA256SUMS.txt SHA256SUMS.txt.minisig --clobber
           gh release edit "$RELEASE_TAG" --draft=false --latest
