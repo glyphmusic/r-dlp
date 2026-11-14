@@ -1,4 +1,4 @@
-# r-dlp 0.2.0 - security patch
+# r-dlp 0.2.1 - bot-checked videos play again
 
-- Signed, repository- and version-bound release checksums.
-- A single publisher verifies all platform archives before making the release public; existing published assets cannot be overwritten.
+- Videos behind YouTube's bot check resolve again. Since 0.1.1 the anonymous visitor bootstrap failed over HTTP/2 because the watch page sends more headers than the default limit allows.
+- The visitor bootstrap reads a 3 KB file instead of the 1.5 MB watch page first: the first bot-checked song resolves in about 0.2 s.

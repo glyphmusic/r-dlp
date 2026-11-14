@@ -35,6 +35,10 @@ impl Resolver {
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(15))
             .pool_idle_timeout(Duration::from_secs(90))
+            // The watch page answers with ~20 KB of headers (CSP, cookies),
+            // above the 16 KB HTTP/2 default: the visitor bootstrap then fails
+            // with a stream error and every bot-checked video is unplayable.
+            .http2_max_header_list_size(256 * 1024)
             .redirect(reqwest::redirect::Policy::none());
         // Keep an explicit HTTP/1 control for same-host A/B measurements.
         if std::env::var("RDLP_HTTP1_ONLY").as_deref() == Ok("1") {
@@ -57,6 +61,7 @@ impl Resolver {
             input,
             timeout,
             "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+            "https://www.youtube.com/sw.js_data",
             "https://www.youtube.com/watch",
         )
     }
@@ -66,6 +71,7 @@ impl Resolver {
         input: &str,
         timeout: Duration,
         player_url: &str,
+        sw_url: &str,
         watch_url: &str,
     ) -> Result<Audio, Error> {
         let deadline = Instant::now()
@@ -81,21 +87,47 @@ impl Resolver {
         // Some videos require an anonymous visitor context. Bootstrap it only
         // when needed, retain it in memory, and retry once. No user cookies.
         if info["playabilityStatus"]["status"].as_str() == Some("LOGIN_REQUIRED") {
-            let response = self
-                .client
-                .get(format!("{watch_url}?v={id}"))
-                .timeout(remaining(deadline)?)
-                .send()?
-                .error_for_status()?;
-            use std::io::Read;
-            let mut page = String::new();
-            response.take(4 * 1024 * 1024).read_to_string(&mut page)?;
-            let visitor = extract_visitor(&page)?;
+            let visitor = self.bootstrap_visitor(&id, deadline, sw_url, watch_url)?;
             *self.visitor.lock().map_err(|_| "Visitor state poisoned")? = Some(visitor.clone());
             info = self.player(&id, Some(&visitor), deadline, player_url)?;
         }
         remaining(deadline)?;
         select_audio(&id, &info)
+    }
+
+    /// Anonymous visitor context: the service-worker data (~3 KB) first, the
+    /// watch page (~1.5 MB) only when that answer changes shape.
+    fn bootstrap_visitor(
+        &self,
+        id: &str,
+        deadline: Instant,
+        sw_url: &str,
+        watch_url: &str,
+    ) -> Result<String, Error> {
+        use std::io::Read;
+        let small = (|| -> Result<String, Error> {
+            let response = self
+                .client
+                .get(sw_url)
+                .timeout(remaining(deadline)?)
+                .send()?
+                .error_for_status()?;
+            let mut body = String::new();
+            response.take(256 * 1024).read_to_string(&mut body)?;
+            extract_sw_visitor(&body)
+        })();
+        if let Ok(visitor) = small {
+            return Ok(visitor);
+        }
+        let response = self
+            .client
+            .get(format!("{watch_url}?v={id}"))
+            .timeout(remaining(deadline)?)
+            .send()?
+            .error_for_status()?;
+        let mut page = String::new();
+        response.take(4 * 1024 * 1024).read_to_string(&mut page)?;
+        extract_visitor(&page)
     }
 
     /// Prime the actual player connection and anonymous visitor state. Failure
@@ -184,6 +216,24 @@ fn extract_visitor(page: &str) -> Result<String, Error> {
         .into_iter::<String>()
         .next()
         .ok_or("Missing visitor value")??;
+    valid_visitor(visitor)
+}
+
+/// `/sw.js_data`: `)]}'` and a JSON array holding the visitor context at
+/// `[0][2][0][0][13]`.
+fn extract_sw_visitor(body: &str) -> Result<String, Error> {
+    let json = body
+        .find('[')
+        .map(|start| &body[start..])
+        .ok_or("No service-worker data")?;
+    let data: Value = serde_json::from_str(json)?;
+    let visitor = data[0][2][0][0][13]
+        .as_str()
+        .ok_or("No visitor in service-worker data")?;
+    valid_visitor(visitor.to_string())
+}
+
+fn valid_visitor(visitor: String) -> Result<String, Error> {
     if visitor.is_empty() || visitor.len() > 1024 || !visitor.is_ascii() {
         return Err("Invalid visitor context".into());
     }
@@ -381,7 +431,7 @@ mod tests {
         let started = Instant::now();
         let budget = Duration::from_millis(300);
         let error = resolver
-            .resolve_at("9bZkp7q19f0", budget, &endpoint, &endpoint)
+            .resolve_at("9bZkp7q19f0", budget, &endpoint, &endpoint, &endpoint)
             .unwrap_err();
         let elapsed = started.elapsed();
         upstream.join().unwrap();
@@ -400,6 +450,15 @@ mod tests {
             "abc="
         );
         assert!(extract_visitor(r#"{"VISITOR_DATA": 42}"#).is_err());
+    }
+    #[test]
+    fn reads_visitor_from_service_worker_data() {
+        let body = r#")]}'
+[["yt.sw.adr",null,[[["de","DE",null,"1.2.3.4",null,null,null,null,null,null,null,"Apple","","CgtWaXNpdG9yAA%3D%3D"]]]]]"#;
+        assert_eq!(extract_sw_visitor(body).unwrap(), "CgtWaXNpdG9yAA%3D%3D");
+        assert!(extract_sw_visitor(")]}'
+[[\"yt.sw.adr\",null,[]]]").is_err());
+        assert!(extract_sw_visitor("<html>").is_err());
     }
     #[test]
     fn rejects_foreign_hosts_and_malformed_inputs() {

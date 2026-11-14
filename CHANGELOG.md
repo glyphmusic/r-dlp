@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-11-14
+
+### Fixed
+
+- Videos behind YouTube's bot check play again. Since 0.1.1 the anonymous visitor bootstrap failed over HTTP/2 because the watch page sends more headers than the default limit allows.
+
+### Changed
+
+- The visitor bootstrap reads a 3 KB file instead of the 1.5 MB watch page first: the first bot-checked song resolves in about 0.2 s.
+
 ## 0.2.0 - 2026-10-23
 
 ### Security
