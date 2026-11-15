@@ -37,6 +37,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      # Restores the compiled dependencies that release-cache.yml saves on
+      # main; a cache saved here would only be visible to this tag.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.target }}
+          save-if: false
       - name: Test and build
         run: |
           cargo test --locked --target ${{ matrix.target }}
