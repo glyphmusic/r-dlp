@@ -1,4 +1,3 @@
-# r-dlp 0.2.2 - bot-checked videos play again
+# r-dlp 0.2.3 - H.264 MP4 video stream resolution
 
-- Videos behind YouTube's bot check resolve again. Since 0.1.1 the anonymous visitor bootstrap failed over HTTP/2 because the watch page sends more headers than the default limit allows.
-- The visitor bootstrap reads a 3 KB file instead of the 1.5 MB watch page first: the first bot-checked song resolves in about 0.2 s.
+- Added `Resolver::resolve_video`, the `--video [--max-height N] [--get-url]` CLI mode, and `{"kind":"video","max_height":...}` requests in `r-dlp serve` (with `"capabilities":["audio","video"]`) to resolve playable H.264 MP4 video streams and matching AAC audio in a single YouTube player call.

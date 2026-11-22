@@ -16,7 +16,7 @@ fn run() -> Result<(), Error> {
     }
     if args.is_empty() || args == ["--help"] {
         println!(
-            "r-dlp [--get-url | --verify] VIDEO\nr-dlp serve [--warmup]   # newline JSON {{\"id\":\"VIDEO_ID\"}} on stdin"
+            "r-dlp [--get-url | --verify | --video [--max-height N] [--get-url]] VIDEO\nr-dlp serve [--warmup]   # newline JSON {{\"id\":\"VIDEO_ID\",\"kind\":\"audio|video\",\"max_height\":720}} on stdin"
         );
         return Ok(());
     }
@@ -29,7 +29,7 @@ fn run() -> Result<(), Error> {
         }
         println!(
             "{}",
-            json!({"ready":true,"version":env!("CARGO_PKG_VERSION")})
+            json!({"ready":true,"version":env!("CARGO_PKG_VERSION"),"capabilities":["audio","video"]})
         );
         io::stdout().flush()?;
         let mut input = io::stdin().lock();
@@ -53,12 +53,45 @@ fn run() -> Result<(), Error> {
                 }
             };
             let id = request["id"].as_str().unwrap_or("");
-            let result = match resolver.resolve(id) {
-                Ok(audio) => serde_json::to_value(audio)?,
-                Err(error) => json!({"id":id,"error":error.to_string()}),
+            let is_video = request["kind"].as_str() == Some("video");
+            let result = if is_video {
+                let max_h = request["max_height"].as_u64().map(|n| n.min(2160) as u32);
+                match resolver.resolve_video(id, max_h) {
+                    Ok(video) => serde_json::to_value(video)?,
+                    Err(error) => json!({"kind":"video","id":id,"error":error.to_string()}),
+                }
+            } else {
+                match resolver.resolve(id) {
+                    Ok(audio) => serde_json::to_value(audio)?,
+                    Err(error) => json!({"id":id,"error":error.to_string()}),
+                }
             };
             println!("{result}");
             io::stdout().flush()?;
+        }
+    } else if args.first().map(String::as_str) == Some("--video") {
+        let mut get_url = false;
+        let mut max_height: Option<u32> = None;
+        let mut input: Option<&str> = None;
+        let mut i = 1;
+        while i < args.len() {
+            match args[i].as_str() {
+                "--get-url" => get_url = true,
+                "--max-height" => {
+                    i += 1;
+                    let raw = args.get(i).ok_or("Missing value for --max-height")?;
+                    max_height = Some(raw.parse::<u32>().map_err(|_| "Invalid --max-height")?);
+                }
+                v if !v.starts_with('-') && input.is_none() => input = Some(v),
+                _ => return Err("Unsupported arguments; see --help".into()),
+            }
+            i += 1;
+        }
+        let video = resolver.resolve_video(input.ok_or("Missing VIDEO")?, max_height)?;
+        if get_url {
+            println!("{}", video.url);
+        } else {
+            println!("{}", serde_json::to_string(&video)?);
         }
     } else {
         let (flag, input) = match args.as_slice() {

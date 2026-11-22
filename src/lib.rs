@@ -22,6 +22,33 @@ pub struct Audio {
     pub duration_seconds: Option<f64>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct VideoStream {
+    pub label: String,
+    pub height: u32,
+    pub url: String,
+    pub format_id: u64,
+    pub mime_type: String,
+    pub bitrate: u64,
+    pub has_audio: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Video {
+    pub kind: &'static str,
+    pub id: String,
+    pub title: String,
+    pub author: String,
+    pub url: String,
+    pub audio_url: Option<String>,
+    pub format_id: u64,
+    pub mime_type: String,
+    pub height: u32,
+    pub bitrate: u64,
+    pub duration_seconds: Option<f64>,
+    pub streams: Vec<VideoStream>,
+}
+
 pub struct Resolver {
     client: Client,
     visitor: Mutex<Option<String>>,
@@ -66,14 +93,36 @@ impl Resolver {
         )
     }
 
-    fn resolve_at(
+    /// Resolve playable H.264 MP4 video stream(s) + matching AAC audio in one
+    /// YouTube player call (reusing this Resolver's connection pool and visitor).
+    pub fn resolve_video(&self, input: &str, max_height: Option<u32>) -> Result<Video, Error> {
+        self.resolve_video_with_timeout(input, max_height, Duration::from_secs(8))
+    }
+
+    pub fn resolve_video_with_timeout(
+        &self,
+        input: &str,
+        max_height: Option<u32>,
+        timeout: Duration,
+    ) -> Result<Video, Error> {
+        self.resolve_video_at(
+            input,
+            max_height,
+            timeout,
+            "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+            "https://www.youtube.com/sw.js_data",
+            "https://www.youtube.com/watch",
+        )
+    }
+
+    fn fetch_player_at(
         &self,
         input: &str,
         timeout: Duration,
         player_url: &str,
         sw_url: &str,
         watch_url: &str,
-    ) -> Result<Audio, Error> {
+    ) -> Result<(String, Value), Error> {
         let deadline = Instant::now()
             .checked_add(timeout)
             .ok_or("Invalid resolution budget")?;
@@ -92,7 +141,32 @@ impl Resolver {
             info = self.player(&id, Some(&visitor), deadline, player_url)?;
         }
         remaining(deadline)?;
+        Ok((id, info))
+    }
+
+    fn resolve_at(
+        &self,
+        input: &str,
+        timeout: Duration,
+        player_url: &str,
+        sw_url: &str,
+        watch_url: &str,
+    ) -> Result<Audio, Error> {
+        let (id, info) = self.fetch_player_at(input, timeout, player_url, sw_url, watch_url)?;
         select_audio(&id, &info)
+    }
+
+    fn resolve_video_at(
+        &self,
+        input: &str,
+        max_height: Option<u32>,
+        timeout: Duration,
+        player_url: &str,
+        sw_url: &str,
+        watch_url: &str,
+    ) -> Result<Video, Error> {
+        let (id, info) = self.fetch_player_at(input, timeout, player_url, sw_url, watch_url)?;
+        select_video(&id, max_height, &info)
     }
 
     /// Anonymous visitor context: the service-worker data (~3 KB) first, the
@@ -352,6 +426,152 @@ fn select_audio(id: &str, info: &Value) -> Result<Audio, Error> {
     })
 }
 
+fn check_playability(id: &str, info: &Value) -> Result<(), Error> {
+    if info["playabilityStatus"]["status"].as_str() != Some("OK") {
+        return Err(format!(
+            "Unavailable: {}",
+            info["playabilityStatus"]["reason"]
+                .as_str()
+                .unwrap_or("Player rejected video")
+        )
+        .into());
+    }
+    if info["videoDetails"]["videoId"].as_str() != Some(id) {
+        return Err("Mismatched player video".into());
+    }
+    if info["videoDetails"]["isLive"].as_bool() == Some(true)
+        || info["microformat"]["playerMicroformatRenderer"]["liveBroadcastDetails"]["isLiveNow"]
+            .as_bool()
+            == Some(true)
+    {
+        return Err("Live content is not supported".into());
+    }
+    Ok(())
+}
+
+fn select_video(id: &str, max_height: Option<u32>, info: &Value) -> Result<Video, Error> {
+    check_playability(id, info)?;
+    let sd = &info["streamingData"];
+    let mut best_audio: Option<(u64, String)> = None;
+    let mut by_height: std::collections::BTreeMap<u32, VideoStream> =
+        std::collections::BTreeMap::new();
+
+    if let Some(formats) = sd["formats"].as_array() {
+        for f in formats {
+            if f["drmFamilies"].is_array() || !f["signatureCipher"].is_null() {
+                continue;
+            }
+            let mime = f["mimeType"].as_str().unwrap_or("");
+            if !mime.starts_with("video/mp4") {
+                continue;
+            }
+            let Some(url) = f["url"].as_str().filter(|u| validate_audio_url(u).is_ok()) else {
+                continue;
+            };
+            let height = f["height"].as_u64().unwrap_or(360) as u32;
+            let bitrate = f["bitrate"].as_u64().unwrap_or(0);
+            let format_id = f["itag"].as_u64().unwrap_or(0);
+            if height == 0 {
+                continue;
+            }
+            let replace = by_height
+                .get(&height)
+                .is_none_or(|prev| !prev.has_audio || bitrate > prev.bitrate);
+            if replace {
+                by_height.insert(
+                    height,
+                    VideoStream {
+                        label: format!("{height}p"),
+                        height,
+                        url: url.into(),
+                        format_id,
+                        mime_type: mime.into(),
+                        bitrate,
+                        has_audio: true,
+                    },
+                );
+            }
+        }
+    }
+
+    if let Some(adaptive) = sd["adaptiveFormats"].as_array() {
+        for f in adaptive {
+            if f["drmFamilies"].is_array() || !f["signatureCipher"].is_null() {
+                continue;
+            }
+            let mime = f["mimeType"].as_str().unwrap_or("");
+            let Some(url) = f["url"].as_str().filter(|u| validate_audio_url(u).is_ok()) else {
+                continue;
+            };
+            let bitrate = f["bitrate"].as_u64().unwrap_or(0);
+            if mime.starts_with("audio/mp4;")
+                && f["audioTrack"]["audioIsDefault"].as_bool() != Some(false)
+            {
+                if best_audio.as_ref().is_none_or(|(b, _)| bitrate > *b) {
+                    best_audio = Some((bitrate, url.into()));
+                }
+            } else if mime.starts_with("video/mp4;") && mime.contains("avc1") {
+                let height = f["height"].as_u64().unwrap_or(0) as u32;
+                let format_id = f["itag"].as_u64().unwrap_or(0);
+                if !(144..=1080).contains(&height) {
+                    continue;
+                }
+                let replace = by_height
+                    .get(&height)
+                    .is_none_or(|prev| !prev.has_audio && bitrate > prev.bitrate);
+                if replace {
+                    by_height.insert(
+                        height,
+                        VideoStream {
+                            label: format!("{height}p"),
+                            height,
+                            url: url.into(),
+                            format_id,
+                            mime_type: mime.into(),
+                            bitrate,
+                            has_audio: false,
+                        },
+                    );
+                }
+            }
+        }
+    }
+
+    let mut streams: Vec<VideoStream> = by_height.into_values().collect();
+    streams.sort_by(|a, b| b.height.cmp(&a.height));
+    if streams.is_empty() {
+        return Err("No compatible direct MP4 video stream".into());
+    }
+
+    let limit = max_height.unwrap_or(720);
+    let primary = streams
+        .iter()
+        .find(|s| s.height <= limit)
+        .or_else(|| streams.last())
+        .ok_or("No compatible direct MP4 video stream")?
+        .clone();
+
+    let duration_seconds = info["videoDetails"]["lengthSeconds"]
+        .as_str()
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|d| *d > 0.0);
+
+    Ok(Video {
+        kind: "video",
+        id: id.into(),
+        title: info["videoDetails"]["title"].as_str().unwrap_or("").into(),
+        author: info["videoDetails"]["author"].as_str().unwrap_or("").into(),
+        url: primary.url,
+        audio_url: best_audio.map(|(_, u)| u),
+        format_id: primary.format_id,
+        mime_type: primary.mime_type,
+        height: primary.height,
+        bitrate: primary.bitrate,
+        duration_seconds,
+        streams,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -501,5 +721,31 @@ mod tests {
         info["videoDetails"]["isLive"] = json!(false);
         info["videoDetails"]["videoId"] = json!("aaaaaaaaaaa");
         assert!(select_audio("dQw4w9WgXcQ", &info).is_err());
+    }
+
+    #[test]
+    fn selects_h264_video_qualities_with_audio_in_one_pass() {
+        let info = json!({
+            "playabilityStatus": {"status": "OK"},
+            "videoDetails": {"videoId": "dQw4w9WgXcQ", "title": "Test Video", "author": "Artist", "lengthSeconds": "213"},
+            "streamingData": {
+                "adaptiveFormats": [
+                    {"itag": 140, "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"", "bitrate": 130000, "url": "https://a.googlevideo.com/aud"},
+                    {"itag": 137, "height": 1080, "mimeType": "video/mp4; codecs=\"avc1.640028\"", "bitrate": 4000000, "url": "https://a.googlevideo.com/v1080"},
+                    {"itag": 136, "height": 720, "mimeType": "video/mp4; codecs=\"avc1.4D401F\"", "bitrate": 1200000, "url": "https://a.googlevideo.com/v720"},
+                    {"itag": 134, "height": 360, "mimeType": "video/mp4; codecs=\"avc1.4D4015\"", "bitrate": 450000, "url": "https://a.googlevideo.com/v360"}
+                ]
+            }
+        });
+        let hd = select_video("dQw4w9WgXcQ", Some(720), &info).unwrap();
+        assert_eq!(hd.kind, "video");
+        assert_eq!(hd.height, 720);
+        assert_eq!(hd.url, "https://a.googlevideo.com/v720");
+        assert_eq!(hd.audio_url.as_deref(), Some("https://a.googlevideo.com/aud"));
+        assert_eq!(hd.streams.len(), 3);
+
+        let sd = select_video("dQw4w9WgXcQ", Some(360), &info).unwrap();
+        assert_eq!(sd.height, 360);
+        assert_eq!(sd.url, "https://a.googlevideo.com/v360");
     }
 }

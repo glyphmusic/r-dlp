@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.2.3 - 2026-11-22
+
+### Added
+
+- **H.264 MP4 video stream resolution**: added `Resolver::resolve_video`, the `--video [--max-height N] [--get-url]` CLI mode, and `{"kind":"video","max_height":...}` support in `r-dlp serve` (advertised via `"capabilities":["audio","video"]`), returning playable H.264 MP4 video streams and matching AAC audio in a single player call.
+
 ## 0.2.2 - 2026-11-14
 
 ### Fixed
